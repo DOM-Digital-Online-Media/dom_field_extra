@@ -1,0 +1,142 @@
+<?php
+
+/**
+ * @file
+ * Contains functions and hooks for dom_field_extra.module.
+ */
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Entity\EntityForm;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Field\FieldConfigInterface;
+use Drupal\user\EntityOwnerInterface;
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function dom_field_extra_form_field_config_edit_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $field = $form_state->getFormObject()->getEntity();
+  $config = \Drupal::configFactory()->getEditable('dom_field_extra.private_fields');
+
+  if (!$config || empty($config->get('types')[$field->getTargetEntityTypeId()])) {
+    return;
+  }
+
+  $form['private_field'] = [
+    '#type' => 'checkbox',
+    '#title' => t("Allow the author to hide this field's value by making it private."),
+    '#default_value' => $field->getThirdPartySetting('dom_field_extra', 'private_field'),
+  ];
+
+  array_unshift($form['actions']['submit']['#submit'], 'dom_field_extra_form_submit');
+}
+
+/**
+ * Submit to field config form to save private setting.
+ */
+function dom_field_extra_form_submit(&$form, FormStateInterface $form_state) {
+  $field = $form_state->getFormObject()->getEntity();
+  $values = $form_state->getValues();
+
+  if ($values['private_field']) {
+    $field->setThirdPartySetting('dom_field_extra', 'private_field', TRUE);
+  }
+  else {
+    if ($field->getThirdPartySetting('dom_field_extra', 'private_field')) {
+      $conditions = [
+        'key' => "private_{$field->getTargetEntityTypeId()}_{$field->getName()}",
+      ];
+      \Drupal::service('dom_field_extra.manager')->delete($conditions);
+    }
+
+    $field->unsetThirdPartySetting('dom_field_extra', 'private_field');
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function dom_field_extra_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $object = $form_state->getFormObject();
+  $config = \Drupal::configFactory()->getEditable('dom_field_extra.private_fields');
+
+  if ($object instanceof EntityForm && $config) {
+    $entity = $object->getEntity();
+    $type = $entity->getEntityTypeId();
+
+    $user = \Drupal::currentUser();
+    $uid = $entity instanceof EntityOwnerInterface ? $entity->getOwnerId() : NULL;
+    $access = $uid === $user->id() || $user->hasPermission('dom field extra access private fields');
+
+    if ($access && !empty($config->get('types')[$type])) {
+      $fields = \Drupal::service('entity_field.manager')->getFieldDefinitions($type, $entity->bundle());
+      foreach ($fields as $name => $field) {
+        if ($field->isDisplayConfigurable('form') &&
+          $field instanceof FieldConfigInterface &&
+          $field->getThirdPartySetting('dom_field_extra', 'private_field')
+        ) {
+          $form[$name]["private_{$type}_{$name}"] = [
+            '#type' => 'checkbox',
+            '#title' => t('Private'),
+            '#default_value' => $entity->id() ? \Drupal::service('dom_field_extra.manager')->isPrivate($entity->id(), "private_{$type}_{$name}") : 0,
+          ];
+        }
+      }
+
+      $form['actions']['submit']['#submit'][] = 'dom_field_extra_entity_form_submit';
+    }
+  }
+}
+
+/**
+ * Submit to entity form to save private setting.
+ */
+function dom_field_extra_entity_form_submit(&$form, FormStateInterface $form_state) {
+  $object = $form_state->getFormObject();
+  $entity = $object->getEntity();
+
+  foreach ($form_state->getValues() as $name => $value) {
+    if (strpos($name, 'private_') !== FALSE) {
+      $conditions = [
+        'key' => $name,
+        'id' => $entity->id(),
+      ];
+
+      if ($value) {
+        \Drupal::service('dom_field_extra.manager')->add($conditions);
+      }
+      else {
+        \Drupal::service('dom_field_extra.manager')->delete($conditions);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_field_access().
+ */
+function dom_field_extra_entity_field_access($operation, FieldDefinitionInterface $field_definition, AccountInterface $account, FieldItemListInterface $items = NULL) {
+  $uid = NULL;
+  if ($items && $entity = $items->getEntity()) {
+    $uid = $entity instanceof EntityOwnerInterface ? $entity->getOwnerId() : NULL;
+  }
+
+  $config = \Drupal::configFactory()->getEditable('dom_field_extra.private_fields');
+  if (empty($config->get('types')[$field_definition->getTargetEntityTypeId()]) ||
+    'view' != $operation ||
+    $account->hasPermission('dom field extra access private fields')
+  ) {
+    return AccessResult::neutral();
+  }
+
+  if ($uid) {
+    $key = "private_{$field_definition->getTargetEntityTypeId()}_{$field_definition->getName()}";
+    $value = \Drupal::service('dom_field_extra.manager')->isPrivate($entity->id(), $key);
+    return $value && $uid != $account->id() ? AccessResult::forbidden() : AccessResult::neutral();
+  }
+
+  return AccessResult::neutral();
+}

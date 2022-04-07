@@ -1,0 +1,48 @@
+<?php
+
+/**
+ * @file
+ * Install/update/uninstall hooks for dom_field_extra module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function dom_field_extra_schema() {
+  $schema = [];
+
+  $schema['dom_field_extra_value'] = [
+    'fields' => [
+      'fid' => [
+        'description' => 'Unique fid for table.',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ],
+      'id' => [
+        'description' => 'The id of the entity.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'default' => 0,
+      ],
+      'key' => [
+        'description' => 'The key of entity type and field name.',
+        'type' => 'varchar',
+        'length' => '200',
+        'not null' => TRUE,
+      ],
+      'private' => [
+        'description' => 'The value of private field.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+    ],
+    'primary key' => ['fid'],
+    'indexes' => [
+      'fid' => ['fid'],
+    ],
+  ];
+
+  return $schema;
+}

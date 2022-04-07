@@ -1,0 +1,6 @@
+dom field extra manage private field settings:
+  title: 'Manage private fields'
+  description: 'Allows a user to manage private fields.'
+dom field extra access private fields:
+  title: 'Access private fields'
+  description: 'Allows a user to access private fields of other users.'

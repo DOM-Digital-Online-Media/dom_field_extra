@@ -1,0 +1,4 @@
+services:
+  dom_field_extra.manager:
+    class: Drupal\dom_field_extra\DomFieldExtraManager
+    arguments: ['@database']

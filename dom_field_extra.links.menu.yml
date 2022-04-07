@@ -1,0 +1,4 @@
+dom_field_extra.private_settings:
+  title: 'Manage private field settings'
+  parent: system.admin_config_system
+  route_name: dom_field_extra.private_settings

@@ -1,0 +1,15 @@
+{
+  "name": "dom-digital-online-media/dom_field_extra",
+  "description": "Provides private entity fields functionality.",
+  "type": "drupal-module",
+  "license": "GPL-2.0-or-later",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "version": "1.0",
+  "authors": [
+    {
+      "name": "Victor Golovachek",
+      "email": "v.golovachek@dev-branch.com"
+    }
+  ]
+}

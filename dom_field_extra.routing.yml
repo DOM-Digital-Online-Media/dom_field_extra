@@ -1,0 +1,9 @@
+dom_field_extra.private_settings:
+  path: '/admin/config/system/private-settings'
+  defaults:
+    _form: '\Drupal\dom_field_extra\Form\DomFieldExtraForm'
+    _title: 'Manage private field settings'
+  requirements:
+    _permission: 'dom field extra manage private field settings'
+  options:
+    _admin_route: TRUE
