@@ -1,5 +1,5 @@
 name: 'DOM field extra'
 type: module
 description: 'Provides private entity fields functionality.'
-core_version_requirement: ^9.0
+core_version_requirement: ^9.0 || ^10
 package: 'DOM'
